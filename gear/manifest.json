@@ -1,0 +1,49 @@
+{
+	"name": "medi-toolbox",
+	"label": "MEDI Toolbox for QSM Processing",
+	"description": "MEDI Toolbox is a collection of MATLAB routines for reconstructing the Quantitative Susceptibility Map (QSM) using the Morphology Enabled Dipole Inversion (MEDI) method. This toolbox also includes background field removal methods, such as Projection onto Dipole Fields (PDF) and Laplacian Boundary Value (LBV).",
+	"version": "1.0.2",
+	"inputs": {
+		"dicom": {
+			"base": "file",
+			"description": "Dicom archive of the QSM acquisition.",
+			"optional": false,
+			"type": {
+				"enum": [
+					"dicom"
+				]
+			}
+		}
+	},
+	"config": {
+		"smv_flag": {
+			"default": true,
+			"description": "Flag for applying spherical mean value smoothing (default=on).",
+			"type": "boolean"
+		},
+		"smv_radius": {
+			"default": 5,
+			"description": "Radius of the spherical kernel in mm",
+			"type": "integer"
+		}
+	},
+	"environment": {
+		"FLYWHEEL": "/flywheel/v0",
+		"LD_LIBRARY_PATH": "/opt/mcr/v95/runtime/glnxa64:/opt/mcr/v95/bin/glnxa64:/opt/mcr/v95/sys/os/glnxa64:/opt/mcr/v95/extern/bin/glnxa64",
+		"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+	},
+	"author": "Cornell MRI Research Lab",
+	"maintainer": "Hua Wu",
+	"license": "MIT",
+	"source": "http://pre.weill.cornell.edu/mri/pages/qsm.html",
+	"url": "https://github.com/huawu02/MEDI_toolbox",
+	"custom": {
+		"gear-builder": {
+			"category": "analysis",
+			"image": "medi-toolbox"
+		},
+		"flywheel": {
+			"suite": "Stanford CNI"
+		}
+	}
+}
