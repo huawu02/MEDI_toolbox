@@ -104,9 +104,13 @@ r_EchoNumber = zeros(matrix_size(3)*NumEcho,1);
 minSlice = 1e10;
 maxSlice = -1e10;
 
-
+if strcmp(version('-release'), '2021a') 
 tags={'SliceLocation','ImagePositionPatient',...
         'EchoTime','EchoNumbers','InstanceNumber'};  % changed EchoNumber to EchoNumbers
+else  % if 2018b
+tags={'SliceLocation','ImagePositionPatient',...
+        'EchoTime','EchoNumber','InstanceNumber'};  % use EchoNumber
+end
 rctr = 0; ictr=0;
 progress='';
 for i = 1:length(filelist)
@@ -121,12 +125,22 @@ for i = 1:length(filelist)
         maxSlice = info2.SliceLocation;
         maxLoc = info2.ImagePositionPatient;
     end
-    if info2.EchoNumbers>NumEcho                    % changed EchoNumber to EchoNumbers
-        TE = [TE zeros([info2.EchoNumbers - NumEcho 1])];
-        NumEcho = info2.EchoNumbers;
-    end
-    if TE(info2.EchoNumbers)==0                     % changed EchoNumber to EchoNumbers
-        TE(info2.EchoNumbers)=info2.EchoTime*1e-3;
+    if strcmp(version('-release'), '2021a')
+        if info2.EchoNumbers>NumEcho                    % changed EchoNumber to EchoNumbers
+            TE = [TE zeros([info2.EchoNumbers - NumEcho 1])];
+            NumEcho = info2.EchoNumbers;
+        end
+        if TE(info2.EchoNumbers)==0                     % changed EchoNumber to EchoNumbers
+            TE(info2.EchoNumbers)=info2.EchoTime*1e-3;
+        end
+    else
+        if info2.EchoNumber>NumEcho                    % changed EchoNumber to EchoNumbers
+            TE = [TE zeros([info2.EchoNumber - NumEcho 1])];
+            NumEcho = info2.EchoNumber;
+        end
+        if TE(info2.EchoNumber)==0                     % changed EchoNumber to EchoNumbers
+            TE(info2.EchoNumber)=info2.EchoTime*1e-3;
+        end
     end
     if mod(info2.InstanceNumber,3)==2
         rctr = rctr + 1;
@@ -135,16 +149,24 @@ for i = 1:length(filelist)
 %         progress=sprintf('Reading file %d', rctr+ictr);
 %         fprintf(progress);
         r_ImagePositionPatient(:,rctr) = info2.ImagePositionPatient;
-        r_EchoNumber(rctr) = info2.EchoNumbers;
+        if strcmp(version('-release'), '2021a')
+            r_EchoNumber(rctr) = info2.EchoNumbers;
+        else
+            r_EchoNumber(rctr) = info2.EchoNumber;
+        end
         filesR{rctr} = filename;
         iReal(:,:,rctr)  = single(dicomread(filename));%magnitude
     elseif mod(info2.InstanceNumber,3)==0
         ictr = ictr + 1;
-%         for ii=1:length(progress); fprintf('\b'); end
-%         progress=sprintf('Reading file %d', rctr+ictr);
-%         fprintf(progress);
+        %         for ii=1:length(progress); fprintf('\b'); end
+        %         progress=sprintf('Reading file %d', rctr+ictr);
+        %         fprintf(progress);
         i_ImagePositionPatient(:,ictr) = info2.ImagePositionPatient;
-        i_EchoNumber(ictr) = info2.EchoNumbers;
+        if strcmp(version('-release'), '2021a')
+            i_EchoNumber(ictr) = info2.EchoNumbers;
+        else
+            i_EchoNumber(ictr) = info2.EchoNumber;
+        end
         filesI{ictr} = filename;
         iImag(:,:,ictr)  = single(dicomread(filename));%magnitude
     end

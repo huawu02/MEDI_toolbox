@@ -63,8 +63,17 @@ function MEDI_full_process(DICOM_dir, smv_flag, smv_radius)
 % run('~/Documents/CNI/tools/MEDI/MEDI_toolbox/MEDI_set_path.m');
 
 % if ~exist('output_dir', 'var'), output_dir = '.'; end
-if ~exist('smv_flag', 'var'), smv_flag = true; end
-if ~exist('smv_radius', 'var'), smv_radius = 5; end
+if ~exist('smv_flag', 'var')
+    smv_flag = true; 
+elseif isdeployed
+    smv_flag = logical(str2num(smv_flag));
+end
+if ~exist('smv_radius', 'var') 
+    smv_radius = 5; 
+elseif isdeployed
+    smv_radius = str2num(smv_radius);
+end
+
 
 %% 
 % Use accelerated (for Siemens and GE only) reading of DICOMs
@@ -161,7 +170,8 @@ Write_DICOM(QSM, files, 'QSM');
 dicom_outdir = 'QSM';
 nifti_outdir = 'NIFTI'; if ~isfolder(nifti_outdir), mkdir(nifti_outdir); end
 system(['dcm2niix -z y -w 1 -b n -f %x_%s_%d ' dicom_outdir]);
-niihdr = niftiinfo(fullfile(dicom_outdir, dir([dicom_outdir '/*.nii*']).name));
+dirlist = dir([dicom_outdir '/*.nii*']);
+niihdr = niftiinfo(fullfile(dicom_outdir, dirlist.name));
 niihdr.raw.datatype = 'single'; niihdr.raw.bitpix = 32; niihdr.Datatype = 'single'; niihdr.BitsPerPixel = 32;
 % mask the QSM volume using the smoothed mask saved in the result file
 Mask_QSM = load(resultfile, 'Mask');

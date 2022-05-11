@@ -13,7 +13,7 @@ for t=tags
     t=char(t);
     [gr, el] = dicomlookup(t);
     for k=1:length(attrs);
-        if (attrs(k).Group==gr)&&(attrs(k).Element==el)
+        if (attrs(k).Group==gr)&(attrs(k).Element==el)
             num_found = num_found + 1;
             switch(attrs(k).VR)
                 case 'DS'

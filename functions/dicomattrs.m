@@ -1,12 +1,12 @@
 function metadata = dicominfo(filename, varargin)
 %DICOMINFO  Read metadata from DICOM message.
-%   INFO = DICOMINFO(FILENAME) reads the metadata from the compliant DICOM
-%   or DICOS file specified in the string or character vector FILENAME.
+%   INFO = DICOMINFO(FILENAME) reads the metadata from the compliant
+%   DICOM file specified in the string or character vector FILENAME.
 %
 %   INFO = DICOMINFO(FILENAME, 'dictionary', D) uses the data dictionary
 %   file given in the string or character vector D to read the DICOM
 %   message.  The file in D must be on the MATLAB search path.  The default
-%   value is dicom-dict.txt
+%   value is dicom-dict.mat.
 %
 %   INFO = DICOMINFO(..., 'UseVRHeuristic', TF) instructs the parser to
 %   use a heuristic to help read certain noncompliant files which switch
@@ -31,7 +31,7 @@ function metadata = dicominfo(filename, varargin)
 %
 %   See also DICOMREAD, DICOMWRITE, DICOMDISP, DICOMDICT, DICOMUID.
 
-%   Copyright 2000-2020 The MathWorks, Inc.
+%   Copyright 2000-2018 The MathWorks, Inc.
 
 
 % Parse input arguments.
@@ -60,17 +60,16 @@ error(message('images:dicominfo:notDICOM'))
 end
 
 % Parse the DICOM file.
-attrs = images.internal.builtins.dicomparse(fileDetails.name, ...
+attrs = images.internal.dicom.dicomparse(fileDetails.name, ...
 fileDetails.bytes, ...
 getMachineEndian, ...
 false, ...
 dictionary, ...
-args.UseVRHeuristic);
-specificCharacterSet = [];
+args.UseVRHeuristic); 
 
 % Process the raw attributes.
 metadata = attrs;
-%[metadata,attrNames] = processMetadata(attrs, true, dictionary, args.UseDictionaryVR, specificCharacterSet);
+%[metadata,attrNames] = processMetadata(attrs, true, dictionary, args.UseDictionaryVR);
 %metadata = dicom_set_imfinfo_values(metadata);
 %metadata = setMoreImfinfoValues(metadata, fileDetails);
 %metadata = processOverlays(metadata, dictionary);
@@ -93,7 +92,7 @@ dicomdict('reset_current');
 
 
 
-function [metadata,attrNames] = processMetadata(attrs, isTopLevel, dictionary, useDictionaryVR , specificCharacterSet)
+function [metadata,attrNames] = processMetadata(attrs, isTopLevel, dictionary, useDictionaryVR)
 
 if (isempty(attrs))
 %metadata = [];
@@ -106,18 +105,14 @@ end
 % Fill the metadata structure, converting data along the way.
 for currentAttr = 1:numel(attrNames)
 
-if (isfield(metadata, 'SpecificCharacterSet'))
-if ~isempty(metadata.SpecificCharacterSet)
-specificCharacterSet = metadata.SpecificCharacterSet;
-end
-end
 this = attrs(currentAttr);
-metadata.(attrNames{currentAttr}) = convertRawAttr(this, dictionary, useDictionaryVR, metadata, specificCharacterSet);
+metadata.(attrNames{currentAttr}) = convertRawAttr(this, dictionary, useDictionaryVR, metadata);
+
 end
 
 
 
-function processedAttr = convertRawAttr(rawAttr, dictionary, useDictionaryVR, metadata, specificCharacterSet)
+function processedAttr = convertRawAttr(rawAttr, dictionary, useDictionaryVR, metadata)
 
 % Information about whether to swap is contained in the attribute.
 swap = needToSwap(rawAttr);
@@ -161,7 +156,6 @@ end
 end
 
 % Convert raw data.  (See PS 3.5 Sec. 6.2 for full VR details.)
-try
 switch (rawAttr.VR)
 case  {'AE', 'AS', 'CS', 'DA', 'DT', 'TM', 'UI', 'UR'}
 
@@ -185,7 +179,7 @@ case {'FD', 'OD'}
 processedAttr = images.internal.dicom.typecast(rawAttr.Data, 'double', swap)';
 
 case {'LO', 'LT', 'SH', 'ST', 'UC', 'UT'}
-metadata.SpecificCharacterSet = specificCharacterSet;
+
 specificCharacterSet = dicom_get_SpecificCharacterSet(metadata, dictionary);
 processedAttr = getUnicodeStringFromBytes(rawAttr.Data, specificCharacterSet);
 processedAttr = images.internal.dicom.deblankAndStripNulls(processedAttr);
@@ -208,7 +202,7 @@ processedAttr = images.internal.dicom.typecast(rawAttr.Data, 'int32', swap)';
 
 case 'SQ'
 
-processedAttr = parseSequence(rawAttr.Data, dictionary, useDictionaryVR, specificCharacterSet);
+processedAttr = parseSequence(rawAttr.Data, dictionary, useDictionaryVR);
 
 case 'SS'
 
@@ -224,7 +218,7 @@ case 'UN'
 % with implicit VR; in which case the Data field contains the
 % parsed sequence.
 if (isstruct(rawAttr.Data))
-processedAttr = parseSequence(rawAttr.Data, dictionary, useDictionaryVR, specificCharacterSet);
+processedAttr = parseSequence(rawAttr.Data, dictionary, useDictionaryVR);
 else
 processedAttr = rawAttr.Data';
 end
@@ -232,14 +226,10 @@ end
 otherwise
 
 % PS 3.5-1999 Sec. 6.2 indicates that all unknown VRs can be
-% interpreted as UN.
+% interpretted as UN.  
 processedAttr = rawAttr.Data';
 
 end
-catch 
-processedAttr = zeros(0, 0, class(rawAttr.Data));
-end
-
 
 % Change empty arrays to 0-by-0.
 if isempty(processedAttr)
@@ -460,7 +450,7 @@ stop = max(separatorIndices(1) - 1, 1);
 substring = rawData(start:stop);
 if ~isempty(substring)
 substring = getUnicodeStringFromBytes(substring, specificCharacterSet);
-unicodeString = [unicodeString '=' substring];
+unicodeString = [unicodeString '=' substring]; 
 end
 
 % Subsequent (possibly multi-byte) ideographic and phonetic components
@@ -472,7 +462,7 @@ unicodeString = [unicodeString '=' substring];
 unicodeString(1) = '';  % Remove leading '='
 
 
-function processedStruct = parseSequence(attrs, dictionary, useDictionaryVR, SpecificCharacterSetVal)
+function processedStruct = parseSequence(attrs, dictionary, useDictionaryVR)
 
 numItems = countItems(attrs);
 itemNames = getItemNames(numItems);
@@ -481,9 +471,6 @@ itemNames = getItemNames(numItems);
 structInitializer = cat(1, itemNames, cell(1, numItems));
 processedStruct = struct(structInitializer{:});
 
-% if isempty(SpecificCharacterSetVal)
-%     SpecificCharacterSetVal = 'ISO_IR 100';
-% end
 % Process each item (but not delimiters).
 item = 0;
 for idx = 1:numel(attrs)
@@ -491,7 +478,7 @@ for idx = 1:numel(attrs)
 this = attrs(idx);
 if (~isDelimiter(this))
 item = item + 1;
-processedStruct.(itemNames{item}) = processMetadata(this.Data, false, dictionary, useDictionaryVR, SpecificCharacterSetVal);
+processedStruct.(itemNames{item}) = processMetadata(this.Data, false, dictionary, useDictionaryVR);
 end
 
 end
@@ -554,7 +541,7 @@ uniqueTotalAttrs = numel(uniqueAttrNames);
 
 % Create a metadata structure to hold the parsed attributes.  Use a
 % cell array initializer, which has a populated section for IMFINFO
-% data and an uninitialized section for the attributes from the DICOM
+% data and an unitialized section for the attributes from the DICOM
 % file.
 if (isTopLevel)
 structInitializer = cat(2, getImfinfoFields(), ...
@@ -570,7 +557,7 @@ end
 function [vr, name] = findVRFromTag(group, element, dictionary)
 
 % Look up the attribute.
-attr = images.internal.builtins.dicomlookup_helper(group, element, dictionary);
+attr = images.internal.dicom.dicomlookup_helper(group, element, dictionary);
 
 % Get the vr.
 if (~isempty(attr))
@@ -601,7 +588,7 @@ out = in;
 
 % Look for overlays.
 allFields = fieldnames(in);
-idx = dicom_strmatch('OverlayData', allFields);
+idx = strmatch('OverlayData', allFields);
 
 if (isempty(idx))
 return
@@ -656,7 +643,7 @@ end
 % Process the overlay.
 for frame = 1:(overlay.NumberOfFrames)
 
-overlayData = images.internal.builtins.tobits(in.(olName));
+overlayData = tobits(in.(olName));
 numSamples = overlay.Columns * overlay.Rows * overlay.NumberOfFrames;
 out.(olName) = permute(reshape(overlayData(1:numSamples), ...
 overlay.Columns, ...
@@ -682,7 +669,7 @@ out = in;
 
 % Look for Curve Data.
 allFields = fieldnames(in);
-idx = dicom_strmatch('CurveData', allFields);
+idx = strmatch('CurveData', allFields);
 
 if (isempty(idx))
 return
@@ -808,7 +795,7 @@ count = 0;
 else
 % Find the items (FFFE,E000) in the array of attributes (all of
 % which are item tags or delimiters; no normal attributes
-% appear in attrs here).
+% appear in attrs here). 
 idx = find(([attrs(:).Group] == 65534) & ...
 ([attrs(:).Element] == 57344));
 count = numel(idx);
