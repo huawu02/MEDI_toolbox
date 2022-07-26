@@ -124,8 +124,8 @@ iMag = sqrt(sum(abs(iField).^2,4));
 % iFreq = unwrapLaplacian((iFreq_raw, matrix_size, voxel_size);
 %
 
-% Use FSL BET to extract brain mask
-Mask = BET(iMag,matrix_size,voxel_size);
+% Use FSL BET to extract brain mask. Use fractional_threshold = 0.1
+Mask = BET(iMag,matrix_size,voxel_size,0.1);
 
 %Prepare mask based on magnitude thresholding
 % Mask = genMask(iField,voxel_size);
@@ -148,7 +148,7 @@ R2s = arlo(TE, abs(iField));
 Mask_CSF = extract_CSF(R2s, Mask, voxel_size);
 
 save RDF.mat RDF iFreq iFreq_raw iMag N_std Mask matrix_size...
-     voxel_size delta_TE CF B0_dir Mask_CSF R2s;  % HW: save R2* map
+     voxel_size delta_TE CF B0_dir Mask_CSF R2s TE;  % HW: save R2* map, TE
 
 %% Morphology enabled dipole inversion with zero reference using CSF (MEDI+0)
 % QSM = MEDI_L1('lambda',1000,'lambda_CSF',100,'merit','smv',5);
