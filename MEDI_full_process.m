@@ -165,10 +165,11 @@ QSM_outname = 'QSM';
 % export QSM variable as dicom files in the 'QSM' directory
 Write_DICOM(QSM, files, 'QSM');
 
-% HW: write QSM directly to nifti to preserve pixel value as floating numbers
+%% HW: write QSM directly to nifti to preserve pixel value as floating numbers
 % first convert QSM dicoms to nifti to get the ni header
 dicom_outdir = 'QSM';
 nifti_outdir = 'NIFTI'; if ~isfolder(nifti_outdir), mkdir(nifti_outdir); end
+setenv('PATH', getenv('PATH')+":/usr/local/bin"); % added this line for MacOS 14.1
 system(['dcm2niix -z y -w 1 -b n -f %x_%s_%d ' dicom_outdir]);
 dirlist = dir([dicom_outdir '/*.nii*']);
 niihdr = niftiinfo(fullfile(dicom_outdir, dirlist.name));
@@ -180,8 +181,15 @@ QSM_masked(~Mask_QSM.Mask) = -20;
 niftiwrite(flip(flip(QSM_masked,2),1), fullfile(nifti_outdir, [QSM_outname, '.nii']), niihdr, 'Compressed', true);
 
 
-%% HW: write R2s to nifti
+% HW: write R2s to nifti
 R2s_masked = R2s;
 R2s_masked(Mask<0.5) = 0;
 niftiwrite(flip(flip(R2s_masked,2),1), fullfile(nifti_outdir, 'R2s.nii'), niihdr, 'Compressed', true);
 
+% calculate M0 map and write to nifti
+m0 = abs(iField)./exp(-permute(repmat(TE,[1 size(R2s)]), [2,3,4,1])./repmat(1./R2s,[1,1,1,size(TE)]));
+m0(repmat(Mask,[1,1,1,size(TE)])<0.5) = 0;
+m0(isnan(m0)) = 0;
+m0(isinf(m0)) = 0;
+m0_mean = mean(m0, 4);
+niftiwrite(flip(flip(m0_mean,2),1), fullfile(nifti_outdir, 'M0.nii'), niihdr, 'Compressed', true);
